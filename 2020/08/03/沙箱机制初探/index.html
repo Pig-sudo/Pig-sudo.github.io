@@ -86,21 +86,21 @@
 
 
 
-<meta name="description" content="前言：之前做题遇到过几次关于沙箱的题目，自己都是靠猜或者是去网上找一些零碎的知识去做的，现在刷buu发现一道关于沙箱机制的题目，加之最近觉得没写博客感觉很多知识点忘得很快，所以打算学习一下沙箱机制，顺便写一篇博客去记录一下。 what’s the 沙箱安全机制 在计算机安全领域，沙箱(Sandbox)是一种程序的隔离运行机制，其目的是限制不可信进程或不可信代码运行时的访问权限。沙箱技术经常被用于执">
+<meta name="description" content="前言之前做题遇到过几次关于沙箱的题目，自己都是靠猜或者是去网上找一些零碎的知识去做的，现在刷buu发现一道关于沙箱机制的题目，加之最近觉得没写博客感觉很多知识点忘得很快，所以打算学习一下沙箱机制，顺便写一篇博客去记录一下。 what’s the 沙箱安全机制 在计算机安全领域，沙箱(Sandbox)是一种程序的隔离运行机制，其目的是限制不可信进程或不可信代码运行时的访问权限。沙箱技术经常被用于执行">
 <meta property="og:type" content="article">
 <meta property="og:title" content="沙箱机制初探">
 <meta property="og:url" content="http://yoursite.com/2020/08/03/%E6%B2%99%E7%AE%B1%E6%9C%BA%E5%88%B6%E5%88%9D%E6%8E%A2/index.html">
 <meta property="og:site_name" content="Tiegu&#39;s Blog">
-<meta property="og:description" content="前言：之前做题遇到过几次关于沙箱的题目，自己都是靠猜或者是去网上找一些零碎的知识去做的，现在刷buu发现一道关于沙箱机制的题目，加之最近觉得没写博客感觉很多知识点忘得很快，所以打算学习一下沙箱机制，顺便写一篇博客去记录一下。 what’s the 沙箱安全机制 在计算机安全领域，沙箱(Sandbox)是一种程序的隔离运行机制，其目的是限制不可信进程或不可信代码运行时的访问权限。沙箱技术经常被用于执">
-<meta property="og:image" content="http://yoursite.com/2020/08/03/%E6%B2%99%E7%AE%B1%E6%9C%BA%E5%88%B6%E5%88%9D%E6%8E%A2/C:%5CUsers%5C%E6%9C%B1%E8%82%B2%E6%B8%85%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5C1596548513546.png">
-<meta property="og:image" content="http://yoursite.com/2020/08/03/%E6%B2%99%E7%AE%B1%E6%9C%BA%E5%88%B6%E5%88%9D%E6%8E%A2/C:%5CUsers%5C%E6%9C%B1%E8%82%B2%E6%B8%85%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5C1596553865439.png">
-<meta property="og:image" content="http://yoursite.com/2020/08/03/%E6%B2%99%E7%AE%B1%E6%9C%BA%E5%88%B6%E5%88%9D%E6%8E%A2/C:%5CUsers%5C%E6%9C%B1%E8%82%B2%E6%B8%85%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5C1596557683900.png">
+<meta property="og:description" content="前言之前做题遇到过几次关于沙箱的题目，自己都是靠猜或者是去网上找一些零碎的知识去做的，现在刷buu发现一道关于沙箱机制的题目，加之最近觉得没写博客感觉很多知识点忘得很快，所以打算学习一下沙箱机制，顺便写一篇博客去记录一下。 what’s the 沙箱安全机制 在计算机安全领域，沙箱(Sandbox)是一种程序的隔离运行机制，其目的是限制不可信进程或不可信代码运行时的访问权限。沙箱技术经常被用于执行">
+<meta property="og:image" content="http://yoursite.com/2020/08/03/%E6%B2%99%E7%AE%B1%E6%9C%BA%E5%88%B6%E5%88%9D%E6%8E%A2/2.png">
+<meta property="og:image" content="http://yoursite.com/2020/08/03/%E6%B2%99%E7%AE%B1%E6%9C%BA%E5%88%B6%E5%88%9D%E6%8E%A2/3.png">
+<meta property="og:image" content="http://yoursite.com/2020/08/03/%E6%B2%99%E7%AE%B1%E6%9C%BA%E5%88%B6%E5%88%9D%E6%8E%A2/4.png">
 <meta property="article:published_time" content="2020-08-03T14:55:37.000Z">
-<meta property="article:modified_time" content="2020-08-05T15:05:17.005Z">
+<meta property="article:modified_time" content="2020-08-05T15:15:02.502Z">
 <meta property="article:author" content="Tiegu Zhu">
 <meta property="article:tag" content="沙箱机制 seccomp prctl">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="http://yoursite.com/2020/08/03/%E6%B2%99%E7%AE%B1%E6%9C%BA%E5%88%B6%E5%88%9D%E6%8E%A2/C:%5CUsers%5C%E6%9C%B1%E8%82%B2%E6%B8%85%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5C1596548513546.png">
+<meta name="twitter:image" content="http://yoursite.com/2020/08/03/%E6%B2%99%E7%AE%B1%E6%9C%BA%E5%88%B6%E5%88%9D%E6%8E%A2/2.png">
 
 
 
@@ -330,7 +330,7 @@
       
 
       
-        <h2 id="前言："><a href="#前言：" class="headerlink" title="前言："></a>前言：</h2><p>之前做题遇到过几次关于沙箱的题目，自己都是靠猜或者是去网上找一些零碎的知识去做的，现在刷buu发现一道关于沙箱机制的题目，加之最近觉得没写博客感觉很多知识点忘得很快，所以打算学习一下沙箱机制，顺便写一篇博客去记录一下。</p>
+        <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>之前做题遇到过几次关于沙箱的题目，自己都是靠猜或者是去网上找一些零碎的知识去做的，现在刷buu发现一道关于沙箱机制的题目，加之最近觉得没写博客感觉很多知识点忘得很快，所以打算学习一下沙箱机制，顺便写一篇博客去记录一下。</p>
 <h2 id="what’s-the-沙箱安全机制"><a href="#what’s-the-沙箱安全机制" class="headerlink" title="what’s the 沙箱安全机制"></a>what’s the 沙箱安全机制</h2><p> 在计算机安全领域，沙箱(Sandbox)是一种程序的隔离运行机制，其目的是限制不可信进程或不可信代码运行时的访问权限。沙箱技术经常被用于执行未经测试的或不可信的客户程序。为了阻止不可信程序可能破坏系统程序或破坏其它用户程序的运行，沙箱技术通过为不可信客户程序提供虚拟化的内存、文件系统、网络等资源，而这种虚拟化手段对客户程序来说是透明的。由于沙箱里的资源被虚拟化（或被间接化），所以沙箱里的不可信程序的恶意行为可以被限制在沙箱中，或者在沙箱里只允许执行在白名单里规定的有限的API操作。</p>
 <p><strong>看概念感觉沙箱机制是一种安全隔离技术，但是个人感觉目前做pwn题遇到的沙箱机制用到的是对于一些system call的调用的ban，所以以下介绍的不是对这个沙箱机制的深入了解，而是介绍两种常见的沙箱 seccomp 安全机制和 prctl  。</strong></p>
 <h2 id="seccomp的探索"><a href="#seccomp的探索" class="headerlink" title="seccomp的探索"></a><code>seccomp</code>的探索</h2><h3 id="What-is-seccomp"><a href="#What-is-seccomp" class="headerlink" title="What is seccomp"></a>What is seccomp</h3><p> seccomp (short for secure computing mode) is a computer security facility in the Linux kernel. It was merged into the Linux kernel mainline in kernel version 2.6.12, which was released on March 8, 2005. seccomp allows a process to make a one-way transition into a “secure” state where it cannot make any system calls except exit(), sigreturn(), read() and write() to already-open file descriptors. Should it attempt any other system calls, the kernel will terminate the process with SIGKILL or SIGSYS. In this sense, it does not virtualize the system’s resources but isolates the process from them entirely. </p>
@@ -362,20 +362,20 @@
 </li>
 </ol>
 <p>这样的话常规的调用 system 函数、one_gadget 的用不了了，这里的设置点其实和 <strong>pwnable.tw 上 orw 那道题一样，只能进行几个系统调用：open、write、read</strong>。</p>
-<p><img src="/2020/08/03/%E6%B2%99%E7%AE%B1%E6%9C%BA%E5%88%B6%E5%88%9D%E6%8E%A2/C:%5CUsers%5C%E6%9C%B1%E8%82%B2%E6%B8%85%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5C1596548513546.png" alt="1596548513546"></p>
+<p><strong><img src="/2020/08/03/%E6%B2%99%E7%AE%B1%E6%9C%BA%E5%88%B6%E5%88%9D%E6%8E%A2/2.png" class></strong></p>
 <p>从上图可以看出，当prctl的第一个参数设置为38时，第二个参数设置为1时，变会触发上述效果。</p>
 <ol start="2">
 <li>PR_SET_SECCOMP（用22表示）</li>
 </ol>
 <p>第二个参数，可以参见man手册里面的介绍</p>
-<p><img src="/2020/08/03/%E6%B2%99%E7%AE%B1%E6%9C%BA%E5%88%B6%E5%88%9D%E6%8E%A2/C:%5CUsers%5C%E6%9C%B1%E8%82%B2%E6%B8%85%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5C1596553865439.png" alt="1596553865439"></p>
+<p><strong><img src="/2020/08/03/%E6%B2%99%E7%AE%B1%E6%9C%BA%E5%88%B6%E5%88%9D%E6%8E%A2/3.png" class></strong></p>
 <p>设置 seccomp ，其实也就是设置沙箱规则，这个 option 有两个子参数：</p>
 <ul>
 <li><p>这里如果设置了 <code>SECCOMP_MODE_STRICT</code> （用1表示）模式的话，系统调用只能使用 read, write,_exit 这三个。</p>
 </li>
 <li><p>如果设置了 <code>SECCOMP_MODE_FILTER</code> （用2表示）的话，系统调用规则就可以被 Berkeley Packet Filter（BPF） 的规则所定义，这玩意就是这里最最重点的东西了。</p>
 <p>首先介绍一下这个BPF是啥吧，度娘上面的解释是：</p>
-<p><img src="/2020/08/03/%E6%B2%99%E7%AE%B1%E6%9C%BA%E5%88%B6%E5%88%9D%E6%8E%A2/C:%5CUsers%5C%E6%9C%B1%E8%82%B2%E6%B8%85%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5C1596557683900.png" alt="1596557683900"></p>
+<p><strong><img src="/2020/08/03/%E6%B2%99%E7%AE%B1%E6%9C%BA%E5%88%B6%E5%88%9D%E6%8E%A2/4.png" class></strong>  </p>
 </li>
 </ul>
 <p>看解释感觉是网络数据包传输过滤的一种规则，但事实上，后面已经被引用为沙箱规则</p>
@@ -396,7 +396,7 @@
 <p>这个其实背后也牵涉到很多内容，参见以下两篇文章的介绍。</p>
 </li>
 </ol>
-<h3 id="seccomp-tools-工具"><a href="#seccomp-tools-工具" class="headerlink" title="seccomp-tools 工具"></a>seccomp-tools 工具</h3><p>以上设置在pwn题中遇到时一般都是禁止了一些系统调用。故可以<strong>seccomp-tools</strong>这个工具去查看禁用的系统调用。</p>
+<h2 id="seccomp-tools-工具"><a href="#seccomp-tools-工具" class="headerlink" title="seccomp-tools 工具"></a>seccomp-tools 工具</h2><p>以上设置在pwn题中遇到时一般都是禁止了一些系统调用。故可以<strong>seccomp-tools</strong>这个工具去查看禁用的系统调用。</p>
 <ul>
 <li>安装：见GitHub项目： <a href="https://github.com/david942j/seccomp-tools" target="_blank" rel="noopener">https://github.com/david942j/seccomp-tools</a> （这里我安装时有个雷点就是这个ruby需要2.24以上，但是ubantu16默认2.22已经是最新版本，需要自己去安装2.24或以上的版本）</li>
 </ul>
@@ -621,7 +621,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#前言："><span class="nav-number">1.</span> <span class="nav-text">前言：</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#what’s-the-沙箱安全机制"><span class="nav-number">2.</span> <span class="nav-text">what’s the 沙箱安全机制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#seccomp的探索"><span class="nav-number">3.</span> <span class="nav-text">seccomp的探索</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#What-is-seccomp"><span class="nav-number">3.1.</span> <span class="nav-text">What is seccomp</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#How-to-use"><span class="nav-number">3.2.</span> <span class="nav-text">How to use</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#prctl-函数"><span class="nav-number">4.</span> <span class="nav-text">prctl 函数</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#seccomp-tools-工具"><span class="nav-number">4.1.</span> <span class="nav-text">seccomp-tools 工具</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考文章"><span class="nav-number">5.</span> <span class="nav-text">参考文章</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#what’s-the-沙箱安全机制"><span class="nav-number">2.</span> <span class="nav-text">what’s the 沙箱安全机制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#seccomp的探索"><span class="nav-number">3.</span> <span class="nav-text">seccomp的探索</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#What-is-seccomp"><span class="nav-number">3.1.</span> <span class="nav-text">What is seccomp</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#How-to-use"><span class="nav-number">3.2.</span> <span class="nav-text">How to use</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#prctl-函数"><span class="nav-number">4.</span> <span class="nav-text">prctl 函数</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#seccomp-tools-工具"><span class="nav-number">5.</span> <span class="nav-text">seccomp-tools 工具</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考文章"><span class="nav-number">6.</span> <span class="nav-text">参考文章</span></a></li></ol></div>
             
 
           </div>
