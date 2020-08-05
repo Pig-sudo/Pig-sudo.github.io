@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+  
+  
+    
+    
+  <script src="/lib/pace/pace.min.js?v=1.0.2"></script>
+  <link href="/lib/pace/pace-theme-flash.min.css?v=1.0.2" rel="stylesheet">
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="沙箱机制 seccomp prctl," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="前言：之前做题遇到过几次关于沙箱的题目，自己都是靠猜或者是去网上找一些零碎的知识去做的，现在刷buu发现一道关于沙箱机制的题目，加之最近觉得没写博客感觉很多知识点忘得很快，所以打算学习一下沙箱机制，顺便写一篇博客去记录一下。 what’s the 沙箱安全机制 在计算机安全领域，沙箱(Sandbox)是一种程序的隔离运行机制，其目的是限制不可信进程或不可信代码运行时的访问权限。沙箱技术经常被用于执">
+<meta property="og:type" content="article">
+<meta property="og:title" content="沙箱机制初探">
+<meta property="og:url" content="http://yoursite.com/2020/08/03/%E6%B2%99%E7%AE%B1%E6%9C%BA%E5%88%B6%E5%88%9D%E6%8E%A2/index.html">
+<meta property="og:site_name" content="Tiegu&#39;s Blog">
+<meta property="og:description" content="前言：之前做题遇到过几次关于沙箱的题目，自己都是靠猜或者是去网上找一些零碎的知识去做的，现在刷buu发现一道关于沙箱机制的题目，加之最近觉得没写博客感觉很多知识点忘得很快，所以打算学习一下沙箱机制，顺便写一篇博客去记录一下。 what’s the 沙箱安全机制 在计算机安全领域，沙箱(Sandbox)是一种程序的隔离运行机制，其目的是限制不可信进程或不可信代码运行时的访问权限。沙箱技术经常被用于执">
+<meta property="og:image" content="http://yoursite.com/2020/08/03/%E6%B2%99%E7%AE%B1%E6%9C%BA%E5%88%B6%E5%88%9D%E6%8E%A2/C:%5CUsers%5C%E6%9C%B1%E8%82%B2%E6%B8%85%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5C1596548513546.png">
+<meta property="og:image" content="http://yoursite.com/2020/08/03/%E6%B2%99%E7%AE%B1%E6%9C%BA%E5%88%B6%E5%88%9D%E6%8E%A2/C:%5CUsers%5C%E6%9C%B1%E8%82%B2%E6%B8%85%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5C1596553865439.png">
+<meta property="og:image" content="http://yoursite.com/2020/08/03/%E6%B2%99%E7%AE%B1%E6%9C%BA%E5%88%B6%E5%88%9D%E6%8E%A2/C:%5CUsers%5C%E6%9C%B1%E8%82%B2%E6%B8%85%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5C1596557683900.png">
+<meta property="article:published_time" content="2020-08-03T14:55:37.000Z">
+<meta property="article:modified_time" content="2020-08-05T15:05:17.005Z">
+<meta property="article:author" content="Tiegu Zhu">
+<meta property="article:tag" content="沙箱机制 seccomp prctl">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://yoursite.com/2020/08/03/%E6%B2%99%E7%AE%B1%E6%9C%BA%E5%88%B6%E5%88%9D%E6%8E%A2/C:%5CUsers%5C%E6%9C%B1%E8%82%B2%E6%B8%85%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5C1596548513546.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"hide","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/08/03/沙箱机制初探/"/>
+
+
+
+
+
+  <title>沙箱机制初探 | Tiegu's Blog</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Tiegu's Blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">二进制萌新</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/08/03/%E6%B2%99%E7%AE%B1%E6%9C%BA%E5%88%B6%E5%88%9D%E6%8E%A2/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Tiegu Zhu">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/uploads/z.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Tiegu's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">沙箱机制初探</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2020-08-03T22:55:37+08:00">
+                2020-08-03
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="前言："><a href="#前言：" class="headerlink" title="前言："></a>前言：</h2><p>之前做题遇到过几次关于沙箱的题目，自己都是靠猜或者是去网上找一些零碎的知识去做的，现在刷buu发现一道关于沙箱机制的题目，加之最近觉得没写博客感觉很多知识点忘得很快，所以打算学习一下沙箱机制，顺便写一篇博客去记录一下。</p>
+<h2 id="what’s-the-沙箱安全机制"><a href="#what’s-the-沙箱安全机制" class="headerlink" title="what’s the 沙箱安全机制"></a>what’s the 沙箱安全机制</h2><p> 在计算机安全领域，沙箱(Sandbox)是一种程序的隔离运行机制，其目的是限制不可信进程或不可信代码运行时的访问权限。沙箱技术经常被用于执行未经测试的或不可信的客户程序。为了阻止不可信程序可能破坏系统程序或破坏其它用户程序的运行，沙箱技术通过为不可信客户程序提供虚拟化的内存、文件系统、网络等资源，而这种虚拟化手段对客户程序来说是透明的。由于沙箱里的资源被虚拟化（或被间接化），所以沙箱里的不可信程序的恶意行为可以被限制在沙箱中，或者在沙箱里只允许执行在白名单里规定的有限的API操作。</p>
+<p><strong>看概念感觉沙箱机制是一种安全隔离技术，但是个人感觉目前做pwn题遇到的沙箱机制用到的是对于一些system call的调用的ban，所以以下介绍的不是对这个沙箱机制的深入了解，而是介绍两种常见的沙箱 seccomp 安全机制和 prctl  。</strong></p>
+<h2 id="seccomp的探索"><a href="#seccomp的探索" class="headerlink" title="seccomp的探索"></a><code>seccomp</code>的探索</h2><h3 id="What-is-seccomp"><a href="#What-is-seccomp" class="headerlink" title="What is seccomp"></a>What is seccomp</h3><p> seccomp (short for secure computing mode) is a computer security facility in the Linux kernel. It was merged into the Linux kernel mainline in kernel version 2.6.12, which was released on March 8, 2005. seccomp allows a process to make a one-way transition into a “secure” state where it cannot make any system calls except exit(), sigreturn(), read() and write() to already-open file descriptors. Should it attempt any other system calls, the kernel will terminate the process with SIGKILL or SIGSYS. In this sense, it does not virtualize the system’s resources but isolates the process from them entirely. </p>
+<h3 id="How-to-use"><a href="#How-to-use" class="headerlink" title="How to use"></a>How to use</h3><p>这里主要介绍几个函数以及利用。</p>
+<p><strong></strong></p>
+<p> <code>ctx</code>是<code>Filter context/handle</code>,其中<code>typedef void *scmp_filter_ctx;</code><br><code>seccomp_init</code>是初始化的过滤状态,这里用的是<code>SCMP_ACT_ALLOW</code>,表示默认允许所有的syscacll.如果初始化状态为<code>SCMP_ACT_KILL</code>,则表示默认不允许所有的syscall （详见下图）</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;*</span><br><span class="line"> * seccomp actions</span><br><span class="line"> *&#x2F;</span><br><span class="line"></span><br><span class="line">&#x2F;**</span><br><span class="line"> * Kill the process</span><br><span class="line"> *&#x2F;</span><br><span class="line">#define SCMP_ACT_KILL		0x00000000U</span><br><span class="line">&#x2F;**</span><br><span class="line"> * Throw a SIGSYS signal</span><br><span class="line"> *&#x2F;</span><br><span class="line">#define SCMP_ACT_TRAP		0x00030000U</span><br><span class="line">&#x2F;**</span><br><span class="line"> * Return the specified error code</span><br><span class="line"> *&#x2F;</span><br><span class="line">#define SCMP_ACT_ERRNO(x)	(0x00050000U | ((x) &amp; 0x0000ffffU))</span><br><span class="line">&#x2F;**</span><br><span class="line"> * Notify a tracing process with the specified value</span><br><span class="line"> *&#x2F;</span><br><span class="line">#define SCMP_ACT_TRACE(x)	(0x7ff00000U | ((x) &amp; 0x0000ffffU))</span><br><span class="line">&#x2F;**</span><br><span class="line"> * Allow the syscall to be executed after the action has been logged</span><br><span class="line"> *&#x2F;</span><br><span class="line">#define SCMP_ACT_LOG		0x7ffc0000U</span><br><span class="line">&#x2F;**</span><br><span class="line"> * Allow the syscall to be executed</span><br><span class="line"> *&#x2F;</span><br><span class="line">#define SCMP_ACT_ALLOW		0x7fff0000U</span><br></pre></td></tr></table></figure>
+
+<p><code>seccomp_rule_add</code>是添加一条规则,函数原形如下</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">int seccomp_rule_add(scmp_filter_ctx ctx, uint32_t action, int syscall, unsigned int arg_cnt, ...);</span><br></pre></td></tr></table></figure>
+
+<p><code>seccomp_load</code>是应用过滤,如果不调用<code>seccomp_load</code>则上面所有的过滤都不会生效</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">int seccomp_load(const scmp_filter_ctx ctx);</span><br></pre></td></tr></table></figure>
+
+<p>有一点需要再说一下,我们用的是<code>seccomp_rule_add(ctx, SCMP_ACT_KILL, SCMP_SYS(execve), 0);</code>,<code>arg_cnt</code>为0,表示我们直接限制execve,不管他什么参数.</p>
+<p>如果<code>arg_cnt</code>不为0,那<code>arg_cnt</code>表示后面限制的参数的个数,也就是只有调用execve,且参数满足要求时,才会拦截syscall.（参数详情参见下图）</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;**</span><br><span class="line"> * Specify an argument comparison struct for use in declaring rules</span><br><span class="line"> * @param arg the argument number, starting at 0</span><br><span class="line"> * @param op the comparison operator, e.g. SCMP_CMP_*</span><br><span class="line"> * @param datum_a dependent on comparison</span><br><span class="line"> * @param datum_b dependent on comparison, optional</span><br><span class="line"> *&#x2F;</span><br><span class="line">#define SCMP_CMP(...)		((struct scmp_arg_cmp)&#123;__VA_ARGS__&#125;)</span><br><span class="line"></span><br><span class="line">&#x2F;**</span><br><span class="line"> * Specify an argument comparison struct for argument 0</span><br><span class="line"> *&#x2F;</span><br><span class="line">#define SCMP_A0(...)		SCMP_CMP(0, __VA_ARGS__)</span><br><span class="line"></span><br><span class="line">&#x2F;**</span><br><span class="line"> * Specify an argument comparison struct for argument 1</span><br><span class="line"> *&#x2F;</span><br><span class="line">#define SCMP_A1(...)		SCMP_CMP(1, __VA_ARGS__)</span><br><span class="line"></span><br><span class="line">&#x2F;**</span><br><span class="line"> * Specify an argument comparison struct for argument 2</span><br><span class="line"> *&#x2F;</span><br><span class="line">#define SCMP_A2(...)		SCMP_CMP(2, __VA_ARGS__)</span><br><span class="line"></span><br><span class="line">&#x2F;**</span><br><span class="line"> * Specify an argument comparison struct for argument 3</span><br><span class="line"> *&#x2F;</span><br><span class="line">#define SCMP_A3(...)		SCMP_CMP(3, __VA_ARGS__)</span><br><span class="line"></span><br><span class="line">&#x2F;**</span><br><span class="line"> * Specify an argument comparison struct for argument 4</span><br><span class="line"> *&#x2F;</span><br><span class="line">#define SCMP_A4(...)		SCMP_CMP(4, __VA_ARGS__)</span><br><span class="line"></span><br><span class="line">&#x2F;**</span><br><span class="line"> * Specify an argument comparison struct for argument 5</span><br><span class="line"> *&#x2F;</span><br><span class="line">#define SCMP_A5(...)		SCMP_CMP(5, __VA_ARGS__)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">&#x2F;**</span><br><span class="line"> * Comparison operators</span><br><span class="line"> *&#x2F;</span><br><span class="line">enum scmp_compare &#123;</span><br><span class="line">	_SCMP_CMP_MIN &#x3D; 0,</span><br><span class="line">	SCMP_CMP_NE &#x3D; 1,		&#x2F;**&lt; not equal *&#x2F;</span><br><span class="line">	SCMP_CMP_LT &#x3D; 2,		&#x2F;**&lt; less than *&#x2F;</span><br><span class="line">	SCMP_CMP_LE &#x3D; 3,		&#x2F;**&lt; less than or equal *&#x2F;</span><br><span class="line">	SCMP_CMP_EQ &#x3D; 4,		&#x2F;**&lt; equal *&#x2F;</span><br><span class="line">	SCMP_CMP_GE &#x3D; 5,		&#x2F;**&lt; greater than or equal *&#x2F;</span><br><span class="line">	SCMP_CMP_GT &#x3D; 6,		&#x2F;**&lt; greater than *&#x2F;</span><br><span class="line">	SCMP_CMP_MASKED_EQ &#x3D; 7,		&#x2F;**&lt; masked equality *&#x2F;</span><br><span class="line">	_SCMP_CMP_MAX,</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">&#x2F;**</span><br><span class="line"> * Argument datum</span><br><span class="line"> *&#x2F;</span><br><span class="line">typedef uint64_t scmp_datum_t;</span><br><span class="line"></span><br><span class="line">&#x2F;**</span><br><span class="line"> * Argument &#x2F; Value comparison definition</span><br><span class="line"> *&#x2F;</span><br><span class="line">struct scmp_arg_cmp &#123;</span><br><span class="line">	unsigned int arg;	&#x2F;**&lt; argument number, starting at 0 *&#x2F;</span><br><span class="line">	enum scmp_compare op;	&#x2F;**&lt; the comparison op, e.g. SCMP_CMP_* *&#x2F;</span><br><span class="line">	scmp_datum_t datum_a;</span><br><span class="line">	scmp_datum_t datum_b;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>举个例子：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">#include &lt;unistd.h&gt;</span><br><span class="line">#include &lt;seccomp.h&gt;</span><br><span class="line">#include &lt;linux&#x2F;seccomp.h&gt;</span><br><span class="line"></span><br><span class="line">int main(void)&#123;</span><br><span class="line">	scmp_filter_ctx ctx;</span><br><span class="line">	ctx &#x3D; seccomp_init(SCMP_ACT_ALLOW);</span><br><span class="line">	seccomp_rule_add(ctx, SCMP_ACT_KILL,         SCMP_SYS(write),1,SCMP_A2(SCMP_CMP_EQ,0x10));&#x2F;&#x2F;第2(从0)个参数等于0x10</span><br><span class="line">	seccomp_load(ctx);</span><br><span class="line">	write(1,&quot;i will give you a shell\n&quot;,24);&#x2F;&#x2F;不被拦截</span><br><span class="line">	write(1,&quot;1234567812345678&quot;,0x10);&#x2F;&#x2F;被拦截</span><br><span class="line">	return 0;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="prctl-函数"><a href="#prctl-函数" class="headerlink" title="prctl 函数"></a>prctl 函数</h2><p>查看函数原型：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">#include &lt;sys&#x2F;prctl.h&gt;</span><br><span class="line">int prctl(int option, unsigned long arg2, unsigned long arg3,unsigned long arg4,unsigned long arg5);</span><br></pre></td></tr></table></figure>
+
+<p>第一个参数是指定相应的操作，在手册上有特别多的选项，这里打算介绍两个。</p>
+<ol>
+<li><p>PR_SET_NO_NEW_PRIVS</p>
+<p>简单的说就是如果 option 设置为 <code>PR_SET_NO_NEW_PRIVS</code> 的话，第二个参数如果设置为 1 的话，<strong>不能够进行 execve 的系统调用，同时这个选项还会继承给子进程</strong>。</p>
+</li>
+</ol>
+<p>这样的话常规的调用 system 函数、one_gadget 的用不了了，这里的设置点其实和 <strong>pwnable.tw 上 orw 那道题一样，只能进行几个系统调用：open、write、read</strong>。</p>
+<p><img src="/2020/08/03/%E6%B2%99%E7%AE%B1%E6%9C%BA%E5%88%B6%E5%88%9D%E6%8E%A2/C:%5CUsers%5C%E6%9C%B1%E8%82%B2%E6%B8%85%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5C1596548513546.png" alt="1596548513546"></p>
+<p>从上图可以看出，当prctl的第一个参数设置为38时，第二个参数设置为1时，变会触发上述效果。</p>
+<ol start="2">
+<li>PR_SET_SECCOMP（用22表示）</li>
+</ol>
+<p>第二个参数，可以参见man手册里面的介绍</p>
+<p><img src="/2020/08/03/%E6%B2%99%E7%AE%B1%E6%9C%BA%E5%88%B6%E5%88%9D%E6%8E%A2/C:%5CUsers%5C%E6%9C%B1%E8%82%B2%E6%B8%85%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5C1596553865439.png" alt="1596553865439"></p>
+<p>设置 seccomp ，其实也就是设置沙箱规则，这个 option 有两个子参数：</p>
+<ul>
+<li><p>这里如果设置了 <code>SECCOMP_MODE_STRICT</code> （用1表示）模式的话，系统调用只能使用 read, write,_exit 这三个。</p>
+</li>
+<li><p>如果设置了 <code>SECCOMP_MODE_FILTER</code> （用2表示）的话，系统调用规则就可以被 Berkeley Packet Filter（BPF） 的规则所定义，这玩意就是这里最最重点的东西了。</p>
+<p>首先介绍一下这个BPF是啥吧，度娘上面的解释是：</p>
+<p><img src="/2020/08/03/%E6%B2%99%E7%AE%B1%E6%9C%BA%E5%88%B6%E5%88%9D%E6%8E%A2/C:%5CUsers%5C%E6%9C%B1%E8%82%B2%E6%B8%85%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5C1596557683900.png" alt="1596557683900"></p>
+</li>
+</ul>
+<p>看解释感觉是网络数据包传输过滤的一种规则，但事实上，后面已经被引用为沙箱规则</p>
+<blockquote>
+<p>BPF 定义了一个伪机器。这个伪机器可以执行代码，有一个累加器，寄存器，和赋值、算术、跳转指令。一条指令由一个定义好的结构 struct bpf_insn 表示，与真正的机器代码很相似，若干个这样的结构组成的数组，就成为 BPF 的指令序列。</p>
+</blockquote>
+<p>总结一些点：</p>
+<ol>
+<li><p><strong>结构赋值操作指令为</strong>：BPF_STMT、BPF_JUMP ，两个宏展开都是已经赋值的了struct bpf_insn结构。</p>
+</li>
+<li><p><strong>BPF 的主要指令有</strong> BPF_LD，BPF_ALU，BPF_JMP，BPF_RET 等。BPF_LD 将数据装入累加器，BPF_ALU 对累加器执行算术命令，BPF_JMP 是跳转指令，BPF_RET 是程序返回指令</p>
+</li>
+<li><p><strong>BPF 条件判断跳转指令</strong>：BPF_JMP、BPF_JEQ，BPF_JA,BPF_JGT等，语法跟汇编语言几乎相等，根据后面的几个参数进行判断，然后跳转到相应的地方。 </p>
+</li>
+<li><p><strong>返回指令</strong>：BPF_RET、BPF_K，返回后面参数的值 </p>
+</li>
+<li><p><strong>一些杂用指令</strong>：BPF_H表示按字传输，BPF_W表示按双字传输，BPF_B表示按单个字节传输；BPF_ABS表示绝对偏移，BPF_IND表示相对偏移，  <code>SECCOMP_RET_ALLOW</code>  表示允许， <code>SECCOMP_RET_ERRNO</code>  表示禁止。</p>
+<p>这个其实背后也牵涉到很多内容，参见以下两篇文章的介绍。</p>
+</li>
+</ol>
+<h3 id="seccomp-tools-工具"><a href="#seccomp-tools-工具" class="headerlink" title="seccomp-tools 工具"></a>seccomp-tools 工具</h3><p>以上设置在pwn题中遇到时一般都是禁止了一些系统调用。故可以<strong>seccomp-tools</strong>这个工具去查看禁用的系统调用。</p>
+<ul>
+<li>安装：见GitHub项目： <a href="https://github.com/david942j/seccomp-tools" target="_blank" rel="noopener">https://github.com/david942j/seccomp-tools</a> （这里我安装时有个雷点就是这个ruby需要2.24以上，但是ubantu16默认2.22已经是最新版本，需要自己去安装2.24或以上的版本）</li>
+</ul>
+<ul>
+<li><p>使用：一般用到dump这个用法，其他详细用法可见上面github。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">seccomp-tools dump+引用程序即可</span><br></pre></td></tr></table></figure>
+
+
+
+</li>
+</ul>
+<h2 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章"></a>参考文章</h2><p> <a href="http://www.secwk.com/2019/09/20/6564/" target="_blank" rel="noopener">http://www.secwk.com/2019/09/20/6564/</a> </p>
+<p> <a href="https://veritas501.space/2018/05/05/seccomp学习笔记/" target="_blank" rel="noopener">https://veritas501.space/2018/05/05/seccomp%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</a> </p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/%E6%B2%99%E7%AE%B1%E6%9C%BA%E5%88%B6-seccomp-prctl/" rel="tag"> <i class="fa fa-tag"></i> 沙箱机制 seccomp prctl</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/04/24/%E5%88%9D%E6%8E%A2PLT%E8%A1%A8%E4%B8%8EGOT%E8%A1%A8/" rel="next" title="初探PLT表与GOT表">
+                <i class="fa fa-chevron-left"></i> 初探PLT表与GOT表
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/uploads/z.jpg"
+                alt="Tiegu Zhu" />
+            
+              <p class="site-author-name" itemprop="name">Tiegu Zhu</p>
+              <p class="site-description motion-element" itemprop="description">沉下心来，去感受二进制的魅力</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives">
+              
+                  <span class="site-state-item-count">2</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tages/index.html">
+                  <span class="site-state-item-count">2</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/Pig-sudo" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://twitter.com/Tiegu" target="_blank" title="Twitter">
+                      
+                        <i class="fa fa-fw fa-twitter"></i>Twitter</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+            <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-link"></i>
+                友链
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="https://www.andseclab.com/" title="广工AD攻防工作室" target="_blank">广工AD攻防工作室</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="https://www.sunxiaokong.xyz" title="孙小空" target="_blank">孙小空</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://hed9eh0g.top/" title="Hed9eh0g" target="_blank">Hed9eh0g</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="https://www.keyboy.xyz/" title="keyboy" target="_blank">keyboy</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="https://www.cnblogs.com/DEADF1SH-CAT/" title="DEADF1SH-CAT" target="_blank">DEADF1SH-CAT</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#前言："><span class="nav-number">1.</span> <span class="nav-text">前言：</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#what’s-the-沙箱安全机制"><span class="nav-number">2.</span> <span class="nav-text">what’s the 沙箱安全机制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#seccomp的探索"><span class="nav-number">3.</span> <span class="nav-text">seccomp的探索</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#What-is-seccomp"><span class="nav-number">3.1.</span> <span class="nav-text">What is seccomp</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#How-to-use"><span class="nav-number">3.2.</span> <span class="nav-text">How to use</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#prctl-函数"><span class="nav-number">4.</span> <span class="nav-text">prctl 函数</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#seccomp-tools-工具"><span class="nav-number">4.1.</span> <span class="nav-text">seccomp-tools 工具</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考文章"><span class="nav-number">5.</span> <span class="nav-text">参考文章</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Tiegu Zhu</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+  
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/canvas-nest/canvas-nest.min.js"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/three/three.min.js"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/three/canvas_sphere.min.js"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
